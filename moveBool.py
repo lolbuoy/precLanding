@@ -10,11 +10,8 @@ desired_position = [0, 0, 0]
 desired_orientation = np.zeros(3)
 
 # Tolerance threshold for small variations (adjust as needed)
-tolerance_threshold = 0.005
+tolerance_threshold = 0.01
 rollingWSize = 10
-connectionString = 'udpin:localhost:14553'
-master = mavutil.mavlink_connection(connectionString)
-master.wait_heartbeat()
 position_gain = 1.0
 orientation_gain = 1.0
 rolling_average_x, rolling_average_y = 0.0065, 0.0065
@@ -30,8 +27,9 @@ prev_error_x = 0.0
 prev_error_y = 0.0
 integral_x = 0.0
 integral_y = 0.0
+reposComplete = False
 
-def pid_controller(current_position_x, current_position_y):
+def pid_controller(current_position_x, current_position_y,master):
     global prev_error_x, prev_error_y, integral_x, integral_y
 
     # Calculate position errors
@@ -52,7 +50,7 @@ def pid_controller(current_position_x, current_position_y):
 
     return control_x, control_y
 
-def control_drone():
+def control_drone(master):
     while True:
         # Parse ArUco marker data
         uav_position = formattedJData.offsetData()
@@ -67,12 +65,13 @@ def control_drone():
         rolling_average_y = sum(error[1] for error in position_errors) / len(position_errors)
 
         # Check if translation and rotation are close to zero
-        if abs(rolling_average_x) < tolerance_threshold and abs(rolling_average_y) < tolerance_threshold:
+        if abs(rolling_average_x) < tolerance_threshold and abs(rolling_average_y) < tolerance_threshold and reposComplete:
             print("Rolling average below threshold. Exiting loop.")
             return True  # Return True when the threshold is met
             break
         else:
             pid_x, pid_y = pid_controller(position_error_x, position_error_y)
             movement.movement(pid_x, pid_y, master)
+            reposComplete = True
             time.sleep(0.5)
 
