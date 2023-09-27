@@ -11,8 +11,8 @@ def offsetData():
         values = message.split()
         
         if len(values) >= 7:
-            x = int(values[2])
-            y = int(values[3])
+            x = values[2]
+            y = values[3]
             XYOffset = [(x/1000), (y/1000)]
             return XYOffset
         else:
