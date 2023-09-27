@@ -13,7 +13,7 @@ def offsetData():
         if len(values) >= 7:
             x = int(values[2])
             y = int(values[3])
-            XYOffset = [x, y]
+            XYOffset = [(x/1000), (y/1000)]
             return XYOffset
         else:
             print("Invalid message format.")
