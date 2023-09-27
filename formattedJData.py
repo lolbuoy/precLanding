@@ -1,18 +1,18 @@
-import jevoisData
+import parserial.py
 import time
 
 def offsetData():
     while True:
         # Generate a random message
-        message = jevoisData.fakeData()
+        message = parserial.read_serial_data()
         print("Generated Message:", message)
 
         # Split the message by spaces to extract values
         values = message.split()
         
         if len(values) >= 7:
-            x = int(values[3])
-            y = int(values[4])
+            x = int(values[2])
+            y = int(values[3])
             XYOffset = [x, y]
             return XYOffset
         else:
