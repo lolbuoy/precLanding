@@ -67,7 +67,6 @@ print("Desired location reached.")
 def GPS():
     gps = None
     gps = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking = True)
-    print( gps.lat , gps.lon , gps.hdg )
     return gps.lat , gps.lon , gps.hdg
             
           
