@@ -2,6 +2,7 @@ import math
 from pymavlink import mavutil
 import threading
 import time
+import moveBool
 connection_string = 'udp:192.168.0.123:690'  # Change to your connection string
 
 # Desired GPS coordinates (latitude and longitude) for reaching the location
@@ -33,7 +34,8 @@ def land():
         elif alt <= desiredalt and alt>safealt :
             print(f"Altitude is below 30 meters ({alt} meters). Switching to GUIDED mode")
             the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,176, 0, 1, 4, 0, 0, 0, 0, 0)
-        elif alt<=safealt:
+            repos_complete = moveBool.control_drone()
+        elif alt<=safealt or repos_complete:
             print(f"safe altitude reached. Switching back to LAND mode...")
             the_connection.mav.command_long_send(
                 the_connection.target_system,
