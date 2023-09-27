@@ -5,6 +5,7 @@ from collections import deque
 import movement
 import time
 
+
 # Initialize desired position and orientation
 desired_position = [0, 0, 0]
 desired_orientation = np.zeros(3)
@@ -70,8 +71,7 @@ def control_drone(master):
             return True  # Return True when the threshold is met
             break
         else:
-            pid_x, pid_y = pid_controller(position_error_x, position_error_y)
+            pid_x, pid_y = pid_controller(position_error_x, position_error_y,master)
             movement.movement(pid_x, pid_y, master)
             reposComplete = True
             time.sleep(0.5)
-
