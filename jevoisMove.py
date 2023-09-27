@@ -2,7 +2,8 @@ from pymavlink import mavutil
 import numpy as np
 import formattedJData
 from collections import deque
-
+import movement
+import time
 # Initialize desired position and orientation
 desired_position = [0,0,0]
 desired_orientation = np.zeros(3)
@@ -18,11 +19,11 @@ orientation_gain = 1.0
 rolling_average_x, rolling_average_y = 0.0065 , 0.0065
 position_errors=deque(maxlen=rollingWSize)
 
-
+uav_position = [0,0]
 # PID controller gains (adjust as needed)
-kp = 0.5  # Proportional gain
-ki = 0.35  # Integral gain
-kd = 0.35 # Derivative gain
+kp = 1  # Proportional gain
+ki = 0  # Integral gain
+kd = 0 # Derivative gain
 
 # Initialize PID controller variables
 prev_error_x = 0.0
@@ -69,7 +70,7 @@ while True and uav_position != None :
             break
     else:
         pid_x , pid_y =pid_controller(position_error_x,position_error_y)
-        master.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(5,master.target_system,master.target_component,9,3576,pid_x,pid_y,0,0,0,0,0,0,0,0,0))
-        
+        movement.movement(pid_x,pid_y,master)
+        time.sleep(0.5)
         # Send the desired velocity and yaw rate commands to your drone
-        # Use the appropriate method or library to send commands to your specific drone platform
+        # Use the appropriate method or library to send commands to your specific drone platfor
