@@ -1,18 +1,18 @@
-import parserial.py
+import parserial as parse
 import time
 
 def offsetData():
     while True:
         # Generate a random message
-        message = parserial.read_serial_data()
+        message = parse.read_serial_data()
         print("Generated Message:", message)
 
         # Split the message by spaces to extract values
         values = message.split()
         
         if len(values) >= 7:
-            x = values[2]
-            y = values[3]
+            x = float(values[2])
+            y = float(values[3])
             XYOffset = [(x/1000), (y/1000)]
             return XYOffset
         else:
