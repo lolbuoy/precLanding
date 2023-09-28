@@ -51,8 +51,10 @@ def pid_controller(current_position_x, current_position_y,master):
 
     return control_x, control_y
 
-def control_drone(master):
-    while True:
+def control_drone(master,DRate,safealt):
+    while True and alt>=safealt:
+        gps = master.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+        alt = gps.relative_alt / 1000
         # Parse ArUco marker data
         uav_position = formattedJData.offsetData()
         print(uav_position)
@@ -73,5 +75,7 @@ def control_drone(master):
         else:
             pid_x, pid_y = pid_controller(position_error_x, position_error_y,master)
             movement.movement(pid_x, pid_y, master)
+            movement.guidedLand(master, DRate)
+            print(alt)
             reposComplete = True
-            time.sleep(0.5)
+
