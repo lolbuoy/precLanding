@@ -8,12 +8,6 @@ from collections import deque
 import serial
 
 
-
-serdev = 'COM43'
-connection_string = "tcp:192.168.0.123:5762"
-vehicle = connect(connection_string)
-print("Connected to vehicle")
-
 #import planeoverride_v2_1
 
 commandLength = 0.27 # in seconds, how long should the RC Override command last for, change acording to airframe
