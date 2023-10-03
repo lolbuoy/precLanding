@@ -44,7 +44,7 @@ reposComplete = False
   
 
   
-def read_serial_data():
+def read_serial_data(serdev):
     with serial.Serial(serdev, 115200) as ser:
         while 1:
         # Read a whole line and strip any trailing line ending character:
@@ -53,9 +53,9 @@ def read_serial_data():
             #print ("received: {}".format(line))
             return line
 
-def offsetData():
+def offsetData(serdev):
         # Generate a random message
-        message = read_serial_data()
+        message = read_serial_data(serdev)
         #print("Generated Message:", message)
         if message is not None:
         # Split the message by spaces to extract values
@@ -64,9 +64,9 @@ def offsetData():
                 x = int(values[2])
                 y = int(values[3])
                 XYOffset = [x, y]
-                return XYOffset
+                return XYOffset,True
         else:
-            return 0,0 
+            return 0,0,False 
         # Sleep for a while before generating the next message
         time.sleep(0.25)
 def offsetCorrection(pidx,pidy,vehicle):
