@@ -19,7 +19,7 @@ desired_position = [0, 0, 0]
 desired_orientation = np.zeros(3)
 
 # Tolerance threshold for small variations (adjust as needed)
-tolerance_threshold = 0.075
+tolerance_threshold = 0.005
 rollingWSize = 10
 position_gain = 1.0
 orientation_gain = 1.0
@@ -27,9 +27,10 @@ rolling_average_x, rolling_average_y = 0.0065, 0.0065
 position_errors = deque(maxlen=rollingWSize)
 
 # Initialize PID controller gains
-#kp = 1  # Proportional gain
-#ki = 0  # Integral gain
-#kd = 0 # Derivative gain
+global kp,ki,kd
+kp = 0.8 # Proportional gain
+ki = 0.1  # Integral gain
+kd = 0.1 # Derivative gain
 
 # Initialize PID controller variables
 prev_error_x = 0.0
@@ -55,7 +56,10 @@ def read_serial_data(serdev):
 
 def offsetData(serdev):
         # Generate a random message
-        message = read_serial_data(serdev)
+        if serdev is not None:
+            message = read_serial_data(serdev)
+        else:
+            message = fakeData()
         #print("Generated Message:", message)
         if message is not None:
         # Split the message by spaces to extract values
@@ -66,16 +70,18 @@ def offsetData(serdev):
                 XYOffset = [x, y]
                 return XYOffset,True
         else:
-            return 0,0,False 
+            return [0,0],False 
         # Sleep for a while before generating the next message
         time.sleep(0.25)
-def offsetCorrection(pidx,pidy,vehicle):
+def offsetCorrection(offsetdata,vehicle):
             # Apply min-max scaling to make x and y values zero-centered
             x_min = -999
             x_max = 999
             y_min = -999
             y_max = 999
-
+            offsetvals = offsetdata[0]
+            pidx = offsetvals[0]
+            pidy = offsetvals[1]
             x_scaled = ((pidx) / (x_max - x_min)) * (2000 - 1000)
             y_scaled = ((pidy) / (y_max - y_min)) * (2000 - 1000)
 
@@ -178,9 +184,32 @@ def send_roll_pitch_overrides(vehicle, overrides):
         print(f"Channel {channel_num}: {value}")
 
 #use run_repositioning in the main loop
-def run_repositioning(vehicle):
-  while True: 
-    offset = offsetData()
-    outx,outy = pid_controller(1,0,0,offset[0],offset[1],vehicle)
-    offsetCorrection(offset[0],offset[1],vehicle)#use outx, outy if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
-    time.sleep(0.33)
+def run_repositioning(vehicle, complete,serdev):
+    while 1:
+        if complete:
+            print("Tiger ka hukkum")
+            resetQuit(vehicle)
+        else:
+            print(complete)
+            offset = offsetData(serdev)
+            out = offset[0]
+            is_avail=offset[1]
+            print(offset)
+            outx,outy = pid_controller(kp,ki,kd,out[0],out[1],vehicle)
+            pidOut = ([outx,outy],is_avail)
+            offsetCorrection(pidOut,vehicle)#use pidOut if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
+            time.sleep(0.33)
+
+
+
+import random
+
+def fakeData():
+    # Generate random integers for x, y, and z
+    x = random.randint(-10000, 10000)
+    y = random.randint(-10000, 10000)
+    z = random.randint(-10000, 10000)
+
+# Create the message string
+    message = f"N3 U0 {x} {y} {z} 100 100 1"
+    return message
