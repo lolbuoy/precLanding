@@ -1,6 +1,6 @@
 from dronekit import connect, VehicleMode
 from pymavlink import mavutil
-import auxiliary
+import auxiliary_LD as auxiliary
 import threading
 
 connection_string = 'tcp:localhost:5762'  # Change to your connection string
@@ -12,7 +12,7 @@ throttle_flag = False
 serdev = None  # Keep it as None for running in SITL
 disarmed = False
 # Create a flag to track landing completion
-def throttle_Disarmed_Or_Not(vehicle):
+def throttle_Disarmed_Or_Not(vehicle,serdev):
     throttle_disarmed = False
 
     @vehicle.on_message('STATUSTEXT')
@@ -24,9 +24,11 @@ def throttle_Disarmed_Or_Not(vehicle):
             throttle_disarmed = True
 
     while not throttle_disarmed:
-        pass
-
+        auxiliary.run_repositioning(the_connection,throttle_disarmed,serdev)
+    print("Returning control") 
+   # auxiliary.resetQuit(the_connection)
     return throttle_disarmed
+
 
 def land_Complete_Or_Not(vehicle):
     land_comp = False
@@ -43,12 +45,11 @@ def land_Complete_Or_Not(vehicle):
 
     return land_comp
 # Call the land_Complete_Or_Not function to monitor landing completion
-jai= land_Complete_Or_Not(the_connection)
+isLanding = land_Complete_Or_Not(the_connection)
 #disarmed_thread = threading.Thread(target=throttle_Disarmed_Or_Not(the_connection))
 # Check if landing is complete and perform additional actions if needed
-if jai:
-    print("repos...")
-    print("here lies your mom")
-    auxiliary.run_repositioning(the_connection,disarmed,serdev)    
-while 1:
-    pass
+throttle_Disarmed_Or_Not(vehicle=the_connection,serdev=serdev)
+print("Control returned, proceeding to quit") 
+auxiliary.resetQuit(the_connection)
+# while 1:
+#     pass
