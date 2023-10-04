@@ -191,20 +191,14 @@ def send_roll_pitch_overrides(vehicle, overrides):
 
 #use run_repositioning in the main loop
 def run_repositioning(vehicle, complete,serdev):
-    while 1:
-        if complete:
-            print("Tiger ka hukkum")
-            resetQuit(vehicle)
-        else:
-            print(complete)
-            offset = offsetData(serdev)
-            out = offset[0]
-            is_avail=offset[1]
-            print(offset)
-            outx,outy = pid_controller(kp,ki,kd,out[0],out[1],vehicle)
-            pidOut = ([outx,outy],is_avail)
-            offsetCorrection(pidOut,vehicle)#use pidOut if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
-            time.sleep(0.33)
+    offset = offsetData(serdev)
+    out = offset[0]
+    is_avail=offset[1]
+    print(offset)
+    outx,outy = pid_controller(kp,ki,kd,out[0],out[1],vehicle)
+    pidOut = ([outx,outy],is_avail)
+    offsetCorrection(pidOut,vehicle)#use pidOut if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
+    time.sleep(0.33)
 
 
 
