@@ -6,7 +6,7 @@ import numpy as np
 #import formattedJData
 from collections import deque
 import serial
-
+#import logFiles
 
 #import planeoverride_v2_1
 
@@ -29,8 +29,8 @@ position_errors = deque(maxlen=rollingWSize)
 # Initialize PID controller gains
 global kp,ki,kd
 kp = 0.8 # Proportional gain
-ki = 0.1  # Integral gain
-kd = 0.1 # Derivative gain
+ki = 0  # Integral gain
+kd = 0 # Derivative gain
 
 # Initialize PID controller variables
 prev_error_x = 0.0
@@ -65,10 +65,12 @@ def offsetData(serdev):
         # Split the message by spaces to extract values
             values = message.split()
             if len(values) >= 7:
+                uid = values[1]
                 x = int(values[2])
                 y = int(values[3])
+                z = int(values[4])
                 XYOffset = [x, y]
-                return XYOffset,True
+                return XYOffset,True,z,uid
         else:
             return [0,0],False 
         # Sleep for a while before generating the next message
@@ -88,6 +90,12 @@ def offsetCorrection(offsetdata,vehicle):
             # Ensure scaled values are within the valid RC input range (1000 - 2000)
             rc_channel1 = max(minPWM, min(maxPWM, 1500 + int(x_scaled)))  # Channel 1 (Roll)
             rc_channel2 = max(minPWM, min(maxPWM, 1500 + int(y_scaled)))  # Channel 2 (Pitch)
+            #desktop_folder = logFiles.os.path.join(logFiles.os.path.expanduser("~"), "Desktop", "Jevois_Log")
+
+            # Create the "log" folder if it doesn't exist
+            #logFiles.os.makedirs(desktop_folder, exist_ok=True)
+            #log = logFiles.generate_unique_filename(desktop_folder)
+            #logFiles.loggingData(filename=log,uid=offsetdata[3],x=pidx,y=pidy,z=offsetdata[2],rc1=rc_channel1,rc2=rc_channel2)
 
             # Send RC override messages
             vehicle.channels.overrides[1] = rc_channel1
@@ -122,8 +130,6 @@ def offsetCorrectionPrint(pidx,pidy,vehicle):
             rc_channel1 = max(1350, min(1650, 1500 + int(x_scaled)))  # Channel 1 (Roll)
             rc_channel2 = max(1350, min(1650, 1500 + int(y_scaled)))  # Channel 2 (Pitch)
             print("RC Overrides - Channel 1:", rc_channel1, "Channel 2:", rc_channel2)
-
-
         # Sleep for a while before generating the next message
             time.sleep(0.175)
 def pid_controller(kp,ki,kd,current_position_x, current_position_y,master):
@@ -185,20 +191,14 @@ def send_roll_pitch_overrides(vehicle, overrides):
 
 #use run_repositioning in the main loop
 def run_repositioning(vehicle, complete,serdev):
-    while 1:
-        if complete:
-            print("Tiger ka hukkum")
-            resetQuit(vehicle)
-        else:
-            print(complete)
-            offset = offsetData(serdev)
-            out = offset[0]
-            is_avail=offset[1]
-            print(offset)
-            outx,outy = pid_controller(kp,ki,kd,out[0],out[1],vehicle)
-            pidOut = ([outx,outy],is_avail)
-            offsetCorrection(pidOut,vehicle)#use pidOut if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
-            time.sleep(0.33)
+    offset = offsetData(serdev)
+    out = offset[0]
+    is_avail=offset[1]
+    print(offset)
+    outx,outy = pid_controller(kp,ki,kd,out[0],out[1],vehicle)
+    pidOut = ([outx,outy],is_avail)
+    offsetCorrection(pidOut,vehicle)#use pidOut if pid controller has to be tested #use offsetCorrectionPrint for just seeing how the values are behaving
+    time.sleep(0.33)
 
 
 
