@@ -1,72 +1,65 @@
-import math
+from dronekit import connect, VehicleMode
 from pymavlink import mavutil
+import onichan as auxiliary
 import threading
-import time
-import moveBool
-import movement
-connection_string = 'udp:192.168.208.247:690'  # Change to your connection string
+import expt
+import os
+connection_string = 'tcp:localhost:5762'  # Change to your connection string
+the_connection = connect(connection_string)
+print("connected")
+current_time = expt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "Jevois_Log")
 
-# Desired GPS coordinates (latitude and longitude) for reaching the location
-desired_latitude =-35.3627141# Replace with your desired latitude
-desired_longitude = 149.1651160# Replace with your desired longitude
-#desired altitude to switch to guided mode
-desiredalt=30
-safealt=6.5
-descentrate = 1.1
+# Create the "log" folder if it doesn't exist
+os.makedirs(desktop_folder, exist_ok=True)
 
-# Connect to the autopilot
-the_connection = mavutil.mavlink_connection(connection_string)
+# Generate a unique filename within the "log" folder
+filename = expt.generate_unique_filename(desktop_folder)
 
-def altitude():
-   altitude_thread = threading.Thread(target= altitude())
-   altitude_thread.start()
-def land():
-    
-  while True:
-        gps = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
-        alt = gps.relative_alt / 1000  # Altitude in meters
 
-        if alt > desiredalt:
-            print(f"location reached. Switching to LAND mode...")
-            the_connection.mav.command_long_send(
-                the_connection.target_system,
-                the_connection.target_component,
-                mavutil.mavlink.MAV_CMD_NAV_LAND, 0, 0, 0, 0, 0, 0, 0, 0)
-            #current_mode = LAND_MODE
-        elif alt <= desiredalt and alt>safealt :
-            print(f"Altitude is below 30 meters ({alt} meters). Switching to GUIDED mode")
-            the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,176, 0, 1, 4, 0, 0, 0, 0, 0)
-                        # Send velocity command for descent
-            repos_complete = moveBool.control_drone(the_connection,descentrate,alt,safealt)
-        elif alt<=safealt or repos_complete:
-            print(f"safe altitude reached. Switching back to LAND mode...")
-            the_connection.mav.command_long_send(the_connection.target_system, the_connection.target_component,
-                                     mavutil.mavlink.MAV_CMD_NAV_LAND, 0, 0, 0, 0, 0, 0, 0, 0)
 
-while True:
-    gps = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
-    lat = gps.lat / 1e7  # Latitude in degrees
-    lon = gps.lon / 1e7  # Longitude in degrees
-    alt = gps.relative_alt / 1000  # Altitude in meters
-    
-    # Get the flight mode
-    heartbeat = the_connection.recv_match(type='HEARTBEAT', blocking=True)
-    mode = mavutil.mode_string_v10(heartbeat)
-    
-    print(f"Mode: {mode}, Altitude: {alt} meters, Latitude: {lat}, Longitude: {lon}")
+global throttle_flag
+throttle_flag = False
+serdev = None # Keep it as None for running in SITL
+disarmed = False
+# Create a flag to track landing completion
+def throttle_Disarmed_Or_Not(vehicle,serdev,filename):
+    throttle_disarmed = False
 
-    # Check if the desired GPS coordinates have been reached
-    if (
-        abs(lat - desired_latitude) <= 0.000005 and
-        abs(lon - desired_longitude) <= 0.000005
-    ):
-        land()  # Switch to LAND mode when the desired location is reached
-        break
+    @vehicle.on_message('STATUSTEXT')
+    def handle_status_text1(self, name, msg):
+        # print('Waiting for throttle disarm')
+        if msg.text == "Throttle disarmed":
+            print(msg.text)
+            nonlocal throttle_disarmed
+            throttle_disarmed = True
 
-print("Desired location reached.")
+    while not throttle_disarmed:
+        auxiliary.run_repositioning(the_connection,throttle_disarmed,serdev,filename)
+    print("Returning control") 
+   # auxiliary.resetQuit(the_connection)
+    return throttle_disarmed
 
-              
-def GPS():
-    gps = None
-    gps = the_connection.recv_match(type='GLOBAL_POSITION_INT', blocking = True)
-    return gps.lat , gps.lon , gps.hdg
+
+def land_Complete_Or_Not(vehicle):
+    land_comp = False
+    throttle_disarmed = False
+    @vehicle.on_message('STATUSTEXT')
+    def handle_status_text(self, name, msg):
+        hasread = auxiliary.offsetData(serdev)
+        if msg.text == "Land descend started" and hasread[1]:
+             nonlocal land_comp 
+             land_comp = True
+             the_connection.mode = "QLAND"
+    while not land_comp:  #come out of the loop only when both land_comp and throttle_disarmed
+        pass
+
+    return land_comp
+# Call the land_Complete_Or_Not function to monitor landing completion
+isLanding = land_Complete_Or_Not(the_connection)
+#disarmed_thread = threading.Thread(target=throttle_Disarmed_Or_Not(the_connection))
+# Check if landing is complete and perform additional actions if needed
+throttle_Disarmed_Or_Not(the_connection,serdev,filename)
+print("Control returned, proceeding to quit")
+expt.graph(desktop_folder,filename)
+auxiliary.resetQuit(the_connection)
