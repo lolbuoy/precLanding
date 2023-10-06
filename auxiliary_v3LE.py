@@ -6,7 +6,7 @@ import numpy as np
 #import formattedJData
 from collections import deque
 import serial
-import expt
+import logFile_v2G as expt
 
 #import planeoverride_v2_1
 
